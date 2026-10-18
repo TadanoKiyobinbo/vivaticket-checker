@@ -2,9 +2,11 @@ name: Vivaticket Checker
 
 on:
   schedule:
-    # 10分ごとに定期実行
     - cron: '*/10 * * * *'
-  workflow_dispatch: # 手動で即時テスト実行できるようにするボタン
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   check:
@@ -21,9 +23,18 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests beautifulsoup4
+          pip install playwright beautifulsoup4
+          playwright install chromium
 
       - name: Run checker
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: python check.py
+        python check.py
+
+      - name: Commit and push status changes if any
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.io"
+          git add status.json
+          git status
+          git diff --staged --quiet || (git commit -m "Update ticket status cache" && git push)
